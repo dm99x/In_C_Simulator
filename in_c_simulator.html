@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>In C Simulator — Terry Riley (1964) へのオマージュ</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --bg:#07090e;
+  --surface:#0d1018;
+  --surface2:#131820;
+  --border:rgba(255,255,255,0.08);
+  --border2:rgba(255,255,255,0.14);
+  --text:#c0b8a8;
+  --text-dim:#5a6a80;
+  --text-bright:#ddd8cc;
+  --accent:#1D9E75;
+  --accent2:#BA7517;
+  --coral:#D85A30;
+  --mono:'SF Mono','Consolas','Menlo',monospace;
+  --sans:-apple-system,'Helvetica Neue',Arial,sans-serif;
+}
+
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased;}
+
+.container{max-width:1000px;margin:0 auto;padding:0 28px;}
+
+/* ── HEADER ── */
+header{padding:52px 0 36px;border-bottom:1px solid var(--border);}
+.header-inner{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;}
+.title-block h1{font-family:var(--mono);font-size:clamp(40px,9vw,80px);font-weight:400;letter-spacing:0.18em;color:var(--text-bright);line-height:1;}
+.title-block .byline{font-family:var(--mono);font-size:13px;color:var(--text-dim);letter-spacing:0.1em;margin-top:10px;}
+.header-desc{font-size:13px;color:var(--text-dim);line-height:1.7;max-width:260px;text-align:right;}
+
+/* ── SIMULATOR ── */
+.sim-section{padding:36px 0;}
+.sim-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.sim-topbar{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);gap:10px;}
+.sim-label{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:0.12em;}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:0;transition:opacity .06s;margin-left:auto;flex-shrink:0;}
+
+canvas#sim{display:block;width:100%;background:#06080d;}
+
+/* Ratio strip */
+.ratio-strip{display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);font-family:var(--mono);overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.rc{flex:1;min-width:52px;padding:8px 4px;text-align:center;border-right:1px solid var(--border);}
+.rc:last-child{border-right:none;}
+.rc-n{font-size:15px;color:var(--text-bright);}
+.rc-r{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.rc-c{font-size:10px;margin-top:2px;}
+.flat{color:var(--coral);}
+.close-cents{color:var(--accent);}
+
+/* Controls */
+.controls{padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--border);}
+.ctrl{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);font-family:var(--mono);letter-spacing:.04em;}
+.val{font-size:11px;color:var(--text-bright);min-width:26px;font-family:var(--mono);}
+
+button.btn{padding:6px 14px;border:1px solid var(--border2);background:transparent;color:var(--text);font-family:var(--mono);font-size:11px;letter-spacing:.1em;cursor:pointer;border-radius:4px;transition:background .15s,border-color .15s,color .15s;}
+button.btn:hover{background:var(--surface2);}
+button.btn.playing{border-color:var(--accent);color:var(--accent);}
+
+.tgl{display:flex;border:1px solid var(--border2);border-radius:4px;overflow:hidden;}
+.tbt{padding:4px 9px;font-size:10px;font-family:var(--mono);letter-spacing:.06em;background:transparent;border:none;color:var(--text-dim);cursor:pointer;transition:background .12s,color .12s;}
+.tbt+.tbt{border-left:1px solid var(--border);}
+.tbt.on{background:var(--surface2);color:var(--text-bright);}
+
+input[type=range]{width:66px;accent-color:var(--accent);cursor:pointer;vertical-align:middle;}
+
+/* ── ABOUT ── */
+.about-section{padding:56px 0 72px;border-top:1px solid var(--border);}
+.section-eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--text-dim);text-transform:uppercase;margin-bottom:40px;}
+
+.about-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:40px;}
+.about-card h3{font-size:15px;font-weight:500;color:var(--text-bright);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.about-card p{font-size:14px;line-height:1.85;color:var(--text);margin-bottom:14px;}
+.about-card p:last-child{margin-bottom:0;}
+
+strong.hl{color:var(--text-bright);font-weight:500;}
+
+.formula{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin:10px 0 16px;font-family:var(--mono);font-size:12px;line-height:2.1;color:var(--text-dim);}
+.fv{color:var(--accent2);}
+.fe{color:var(--text-bright);}
+
+.vis-guide{display:flex;flex-direction:column;gap:9px;margin:12px 0 16px;font-size:13px;}
+.vg{display:flex;align-items:center;gap:10px;color:var(--text);}
+.vg-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+.vg-ring{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--text-dim);flex-shrink:0;}
+.vg-trail{width:28px;height:3px;background:linear-gradient(to right,transparent,var(--accent));border-radius:2px;flex-shrink:0;}
+.vg-dash{width:24px;height:0;border-top:1px dashed var(--accent2);flex-shrink:0;}
+
+.ji-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;margin:14px 0;}
+.ji-table th{text-align:left;font-size:10px;letter-spacing:.1em;color:var(--text-dim);padding:4px 10px 10px 0;border-bottom:1px solid var(--border);font-weight:400;}
+.ji-table td{padding:7px 10px 7px 0;border-bottom:1px solid var(--border);color:var(--text);}
+.ji-table td:first-child{color:var(--text-bright);}
+
+.lang-sep{margin:22px 0;border-top:1px solid var(--border);}
+.en-text p{font-size:13.5px;line-height:1.85;color:var(--text-dim);margin-bottom:12px;}
+.en-text p:last-child{margin-bottom:0;}
+.en-text strong.hl{color:var(--text);}
+.en-text .formula{margin:8px 0 14px;}
+.en-text .vis-guide{margin:10px 0 14px;}
+.en-text .vg{color:var(--text-dim);}
+.en-text .ji-table td{color:var(--text-dim);}
+.en-text .ji-table td:first-child{color:var(--text);}
+
+/* ── FOOTER ── */
+footer{padding:28px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-dim);line-height:1.7;}
+footer em{font-style:italic;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  header{padding:36px 0 28px;}
+  .header-inner{flex-direction:column;align-items:flex-start;}
+  .header-desc{text-align:left;max-width:100%;}
+  .controls{gap:9px;}
+  input[type=range]{width:52px;}
+  .about-section{padding:40px 0 56px;}
+  footer{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="header-inner">
+    <div class="title-block">
+      <h1>IN C</h1>
+      <div class="byline">Terry Riley (1964) へのオマージュ</div>
+    </div>
+    <div class="header-desc">
+      アルゴリズムによる演奏シミュレーター<br>
+      疲労モデル × 群れモデル × 純正律
+    </div>
+  </div>
+</header>
+
+<!-- ══ SIMULATOR ══ -->
+<section class="sim-section">
+  <div class="sim-panel">
+
+    <div class="sim-topbar">
+      <span class="sim-label">SIMULATOR · 53 MODULES</span>
+      <div id="pdot" class="pulse-dot"></div>
+    </div>
+
+    <canvas id="sim" height="280"></canvas>
+
+    <div class="ratio-strip">
+      <div class="rc"><div class="rc-n">C</div><div class="rc-r">1/1</div><div class="rc-c close-cents">基準音</div></div>
+      <div class="rc"><div class="rc-n">D</div><div class="rc-r">9/8</div><div class="rc-c close-cents">+4¢</div></div>
+      <div class="rc"><div class="rc-n">E</div><div class="rc-r">5/4</div><div class="rc-c flat">−14¢</div></div>
+      <div class="rc"><div class="rc-n">F</div><div class="rc-r">4/3</div><div class="rc-c close-cents">−2¢</div></div>
+      <div class="rc"><div class="rc-n">G</div><div class="rc-r">3/2</div><div class="rc-c close-cents">+2¢</div></div>
+      <div class="rc"><div class="rc-n">A</div><div class="rc-r">5/3</div><div class="rc-c flat">−16¢</div></div>
+      <div class="rc"><div class="rc-n">B</div><div class="rc-r">15/8</div><div class="rc-c flat">−12¢</div></div>
+    </div>
+
+    <div class="controls">
+      <button id="playBtn" class="btn" onclick="togglePlay()">▶ Play</button>
+      <button class="btn" onclick="doReset()">↺ Reset</button>
+
+      <div class="ctrl">
+        <span>音律</span>
+        <div class="tgl">
+          <button class="tbt" id="btn_tet" onclick="setTuning('tet')">12-TET</button>
+          <button class="tbt on" id="btn_ji" onclick="setTuning('ji')">純正律</button>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <span>音色</span>
+        <div class="tgl">
+          <button class="tbt on" id="tb_tri" onclick="setTimbre('triangle')">Triangle</button>
+          <button class="tbt" id="tb_sin" onclick="setTimbre('sine')">Sine</button>
+          <button class="tbt" id="tb_saw" onclick="setTimbre('sawtooth')">Sawtooth</button>
+        </div>
+      </div>
+
+      <div class="ctrl"><span>BPM</span>
+        <input type="range" id="sl_bpm" min="60" max="240" value="108" step="1">
+        <span class="val" id="vl_bpm">108</span>
+      </div>
+      <div class="ctrl"><span>Fatigue</span>
+        <input type="range" id="sl_fat" min="2" max="30" value="8" step="1">
+        <span class="val" id="vl_fat">8</span>
+      </div>
+      <div class="ctrl"><span>Flock</span>
+        <input type="range" id="sl_flo" min="1" max="20" value="8" step="1">
+        <span class="val" id="vl_flo">8</span>
+      </div>
+      <div class="ctrl"><span>Vol</span>
+        <input type="range" id="sl_vol" min="0" max="100" value="42" step="1">
+        <span class="val" id="vl_vol">42</span>
+      </div>
+      <div class="ctrl"><span>Agents</span>
+        <input type="range" id="sl_nag" min="2" max="10" value="4" step="1">
+        <span class="val" id="vl_nag">4</span>
+      </div>
+    </div>
+
+  </div><!-- /sim-panel -->
+</section>
+
+<!-- ══ ABOUT ══ -->
+<section class="about-section">
+  <div class="section-eyebrow">About this simulator</div>
+
+  <div class="about-grid">
+
+    <!-- Card 1 -->
+    <div class="about-card">
+      <h3>In C について</h3>
+      <p>「In C」（1964年）は、サンフランシスコのミニマリスト作曲家Terry Rileyによって書かれた現代音楽の金字塔です。楽譜はわずか53個の短い音楽的フレーズ（モジュール）で構成されており、演奏者の人数も楽器の種類も問いません。</p>
+      <p>全演奏者は共通のパルス——ピアノが高音のCを8分音符で打ち続けるリズム——に同期しながら、モジュールを1番から順番に演奏します。何回繰り返すか、いつ次へ進むかは、各奏者が周囲の音を聴きながら自律的に判断します。</p>
+      <p>この「不完全な指定」こそがIn Cの革新性です。楽譜は素材（モジュール）と最低限のルールを定めるだけで、具体的な音の連なりは毎回異なります。演奏時間も45分から数時間と不定。現代的に言えば、<strong class="hl">プロセスそのものが作品</strong>であるといえます。</p>
+      <p>ミニマル・ミュージックのみならず、後のアンビエント音楽・エレクトロニカ・テクノに至る広い流れの原点として、今日も世界中で演奏されています。</p>
+
+      <div class="lang-sep"></div>
+      <div class="en-text" lang="en">
+        <p>"In C" (1964) is a landmark of contemporary music written by San Francisco minimalist composer Terry Riley. The score consists of just 53 short musical phrases (modules), with no restrictions on the number of performers or the choice of instruments.</p>
+        <p>All performers synchronize to a common pulse — a piano playing high C as continuous eighth notes — while progressing through the modules in numerical order, each at their own pace. How many times to repeat each module, and when to move on, is left to each performer to decide autonomously while listening to those around them.</p>
+        <p>This "incomplete specification" is the innovation of In C. The score defines only the material (the modules) and a minimum set of rules; the specific sequence of sounds differs with every performance. Duration is also open-ended, ranging from 45 minutes to several hours. In modern terms, <strong class="hl">the process itself is the work.</strong></p>
+        <p>Regarded as an origin point for a lineage extending far beyond minimal music — through ambient, electronica, and techno — the piece continues to be performed worldwide today.</p>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="about-card">
+      <h3>シミュレーションの仕組み</h3>
+      <p>このシミュレーターでは、各演奏者を「エージェント」として実装し、モジュールの完了ごとに次へ進むかどうかを確率的に判断させます。この確率は2つのモデルの平均として計算されます。</p>
+
+      <p><strong class="hl">② 疲労モデル（Fatigue）</strong><br>
+      同じモジュールを繰り返すほど前進確率が高まります。人間の「飽き」を指数関数で近似します。Fatigue値が小さいほど飽きやすく、大きいほど粘り強く留まります。</p>
+
+      <div class="formula">
+        <span class="fv">p_fatigue</span> <span class="fe">= 1 − exp( −繰り返し数 / Fatigue値 )</span>
+      </div>
+
+      <p><strong class="hl">③ 群れモデル（Flock）</strong><br>
+      全エージェントの現在位置の重心（centroid）から遅れるほど前進確率が高まります。Boids的な集団行動をシグモイド関数で実装しています。Flock値が大きいほど群れへの引力が強くなります。</p>
+
+      <div class="formula">
+        <span class="fv">p_flock</span> <span class="fe">= sigmoid( 遅れ量 × Flock値/6 )</span><br>
+        最終確率 <span class="fe">p = 0.5 × p_fatigue + 0.5 × p_flock</span>
+      </div>
+
+      <p>ビジュアル上の読み方：</p>
+      <div class="vis-guide">
+        <div class="vg"><div class="vg-dot"></div>エージェントの現在モジュール位置</div>
+        <div class="vg"><div class="vg-ring"></div>前進確率 p（リングが大きいほど高い）</div>
+        <div class="vg"><div class="vg-trail"></div>通過したモジュールの軌跡</div>
+        <div class="vg"><div class="vg-dash"></div>全エージェントの重心（centroid）</div>
+      </div>
+
+      <p>Fatigue を大きく・Flock を小さくするとドローン的なテクスチャーが生まれ、逆にするとカノン的な対位法的テクスチャーが生まれます。声部数（Agents）が少ないほど各エージェントの動きが音として追いやすくなります。</p>
+
+      <div class="lang-sep"></div>
+      <div class="en-text" lang="en">
+        <p>This simulator implements each performer as an "agent" that makes a probabilistic decision at the completion of each module about whether to advance to the next. This probability is computed as the average of two models.</p>
+        <p><strong class="hl">② Fatigue Model</strong><br>
+        The probability of advancing increases the more a module is repeated — approximating human "boredom" with an exponential function. A smaller Fatigue value means agents tire quickly; a larger value means they linger longer.</p>
+        <div class="formula">
+          <span class="fv">p_fatigue</span> <span class="fe">= 1 − exp( −repeat count / Fatigue value )</span>
+        </div>
+        <p><strong class="hl">③ Flock Model</strong><br>
+        The further an agent falls behind the centroid (mean position) of all agents, the higher its probability of advancing. Boids-like collective behavior is implemented using a sigmoid function. A larger Flock value creates stronger attraction toward the group.</p>
+        <div class="formula">
+          <span class="fv">p_flock</span> <span class="fe">= sigmoid( lag × Flock value / 6 )</span><br>
+          Final probability <span class="fe">p = 0.5 × p_fatigue + 0.5 × p_flock</span>
+        </div>
+        <p>Reading the visualization:</p>
+        <div class="vis-guide">
+          <div class="vg"><div class="vg-dot"></div>Agent's current module position</div>
+          <div class="vg"><div class="vg-ring"></div>Advance probability p (larger ring = higher probability)</div>
+          <div class="vg"><div class="vg-trail"></div>Trail of previously visited modules</div>
+          <div class="vg"><div class="vg-dash"></div>Centroid of all agents</div>
+        </div>
+        <p>A high Fatigue and low Flock value produces a drone-like texture; the reverse produces a canon-like, contrapuntal texture. Fewer voices (Agents) makes it easier to follow each agent's individual movement as sound.</p>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="about-card">
+      <h3>純正律（Just Intonation）について</h3>
+      <p>通常の<strong class="hl">12音平均律（12-TET）</strong>では、1オクターブを等間隔の12音に分割します。これにより全ての調が均等に使えますが、各音程には微妙なズレが生じます——たとえば長三度は本来の純正な比率より14セント高くなります。</p>
+      <p><strong class="hl">純正律</strong>では、音程を倍音列に由来する整数比（長三度=5/4、完全五度=3/2など）で定義します。複数の声部が整数比の関係にある音を同時に鳴らすとき、倍音が完全に一致し、うなりのない「溶け合い」が生まれます。</p>
+
+      <table class="ji-table">
+        <thead><tr><th>音</th><th>整数比</th><th>周波数 (Hz)</th><th>12-TETとの差</th></tr></thead>
+        <tbody>
+          <tr><td>C</td><td>1 / 1</td><td>261.6</td><td class="close-cents">基準</td></tr>
+          <tr><td>D</td><td>9 / 8</td><td>294.3</td><td class="close-cents">+4¢</td></tr>
+          <tr><td>E</td><td>5 / 4</td><td>327.0</td><td class="flat">−14¢</td></tr>
+          <tr><td>F</td><td>4 / 3</td><td>348.8</td><td class="close-cents">−2¢</td></tr>
+          <tr><td>G</td><td>3 / 2</td><td>392.4</td><td class="close-cents">+2¢</td></tr>
+          <tr><td>A</td><td>5 / 3</td><td>436.1</td><td class="flat">−16¢</td></tr>
+          <tr><td>B</td><td>15 / 8</td><td>490.6</td><td class="flat">−12¢</td></tr>
+        </tbody>
+      </table>
+
+      <p>In Cのような反復的・持続的な音楽では、この「溶け合い」の効果が特に顕著です。音律スイッチで12-TETと純正律をリアルタイムに切り替えて比較できます。</p>
+      <p>音色について——<strong class="hl">Sine</strong>は倍音を持たない純粋な正弦波で、声部間の干渉が最も透明に聴こえます。<strong class="hl">Triangle</strong>は奇数次倍音を持つ柔らかい音色です。<strong class="hl">Sawtooth</strong>は全倍音を含む明るい音色で、純正律の整合・不整合がより劇的に感じられます。</p>
+
+      <div class="lang-sep"></div>
+      <div class="en-text" lang="en">
+        <p>In standard <strong class="hl">12-tone equal temperament (12-TET)</strong>, an octave is divided into 12 equally-spaced pitches. While this allows all keys to be used equally, each interval carries a slight deviation — for example, the major third sits 14 cents above its pure ratio.</p>
+        <p>In <strong class="hl">just intonation</strong>, intervals are defined using integer ratios derived from the harmonic series (major third = 5/4, perfect fifth = 3/2, etc.). When multiple voices simultaneously sound notes related by these integer ratios, their overtones align exactly, creating a beatless "fusion" rather than the slight roughness of tempered intervals.</p>
+        <table class="ji-table">
+          <thead><tr><th>Note</th><th>Ratio</th><th>Freq (Hz)</th><th>vs 12-TET</th></tr></thead>
+          <tbody>
+            <tr><td>C</td><td>1 / 1</td><td>261.6</td><td class="close-cents">reference</td></tr>
+            <tr><td>D</td><td>9 / 8</td><td>294.3</td><td class="close-cents">+4¢</td></tr>
+            <tr><td>E</td><td>5 / 4</td><td>327.0</td><td class="flat">−14¢</td></tr>
+            <tr><td>F</td><td>4 / 3</td><td>348.8</td><td class="close-cents">−2¢</td></tr>
+            <tr><td>G</td><td>3 / 2</td><td>392.4</td><td class="close-cents">+2¢</td></tr>
+            <tr><td>A</td><td>5 / 3</td><td>436.1</td><td class="flat">−16¢</td></tr>
+            <tr><td>B</td><td>15 / 8</td><td>490.6</td><td class="flat">−12¢</td></tr>
+          </tbody>
+        </table>
+        <p>In repetitive, sustained music like In C, this fusion effect is especially pronounced. The tuning toggle lets you switch between 12-TET and just intonation in real time for direct comparison.</p>
+        <p>On timbre — <strong class="hl">Sine</strong> produces pure sinusoidal waves with no overtones, making interference between voices most transparent. <strong class="hl">Triangle</strong> has a warm tone with odd-numbered overtones only. <strong class="hl">Sawtooth</strong> contains all overtones in a bright, full tone, making the consonance and dissonance of just intonation feel most dramatic.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div>
+    This simulator is a non-commercial homage to <em>In C</em> by Terry Riley (1964).<br>
+    All rights to the original work belong to Terry Riley.
+  </div>
+  <div>
+    Web Audio API · Canvas 2D · Vanilla JS · No dependencies
+  </div>
+</footer>
+
+</div><!-- /container -->
+
+<!-- ══ SCRIPT ══ -->
+<script>
+const MODS=[
+  [['E4',2],['E4',2]],[['E4',1],['F4',1],['E4',1]],[['E4',2],['F4',4]],[['E4',8]],
+  [['C5',4],['G4',4]],[['G4',2],['E4',2]],[['G4',1],['A4',1],['G4',1],['E4',1]],
+  [['G4',4],['A4',2],['G4',2]],[['C5',6],['R',2]],[['E4',2],['F4',2],['G4',4]],
+  [['C5',2],['B4',2],['G4',4]],[['D5',4],['C5',4]],[['G4',2],['C5',2],['E5',4]],
+  [['E5',2],['D5',2],['C5',4]],[['C5',2],['D5',2],['E5',2],['G5',2]],
+  [['A4',4],['G4',4]],[['E4',2],['G4',2],['A4',2],['G4',2]],[['C5',8]],
+  [['G4',2],['A4',2],['C5',2],['A4',2]],[['E5',4],['C5',4]],
+  [['R',1],['E4',1],['R',1],['E4',1],['F4',2]],[['C4',2],['E4',2],['G4',4]],
+  [['G4',1],['G4',1],['G4',2],['A4',4]],[['E4',3],['F4',1],['G4',4]],
+  [['C5',3],['R',1],['C5',3],['R',1]],[['F4',2],['G4',2],['A4',4]],
+  [['A4',2],['G4',2],['F4',2],['E4',2]],[['C4',4],['G4',4]],
+  [['G4',1],['A4',1],['B4',1],['C5',1],['R',4]],[['E5',2],['E5',2],['D5',4]],
+  [['C5',2],['D5',2],['E5',2],['F5',2]],[['G5',4],['E5',4]],
+  [['E5',1],['F5',1],['E5',1],['D5',1],['C5',4]],[['D5',2],['E5',2],['D5',2],['C5',2]],
+  [['G5',6],['R',2]],[['C5',1],['D5',1],['E5',2],['D5',2],['C5',2]],
+  [['F5',2],['E5',2],['D5',2],['C5',2]],[['G4',2],['G5',4],['R',2]],
+  [['E5',4],['G5',4]],[['C6',8]],[['G5',2],['E5',2],['C5',4]],
+  [['E5',2],['D5',2],['E5',4]],[['D5',8]],[['C5',2],['G4',2],['E4',4]],
+  [['E4',4],['C4',4]],[['G4',3],['R',1],['G4',3],['R',1]],[['E4',6],['G4',2]],
+  [['C4',4],['E4',4]],[['G4',4],['C5',4]],[['E5',2],['C5',2],['G4',4]],
+  [['C4',8]],[['E4',4],['C4',4]],[['C4',16]]
+];
+
+const C4=261.63;
+const JI={
+  'C3':C4/2,'E3':C4*5/8,'G3':C4*3/4,
+  'C4':C4,'D4':C4*9/8,'E4':C4*5/4,'F4':C4*4/3,
+  'G4':C4*3/2,'A4':C4*5/3,'B4':C4*15/8,
+  'C5':C4*2,'D5':C4*9/4,'E5':C4*5/2,'F5':C4*8/3,
+  'G5':C4*3,'C6':C4*4
+};
+
+function n2f(n){
+  if(n==='R')return 0;
+  const m={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+  const r=n.match(/([A-G])(\d)/);
+  return r?440*Math.pow(2,((+r[2]+1)*12+m[r[1]]-69)/12):0;
+}
+
+let tuning='ji',timbre='triangle';
+function freq(n){return n==='R'?0:(tuning==='ji'?(JI[n]||n2f(n)):n2f(n));}
+
+const COLORS=['#1D9E75','#378ADD','#D85A30','#7F77DD','#BA7517','#D4537E','#639922','#5DCAA5','#888780','#E8845A'];
+let agents=[],aud=null,mGain=null,playing=false,sTimer=null;
+let t16=0,nextT=0,bpm=108,fatigue=8,flock=8,vol=42;
+
+class Agent{
+  constructor(id){this.id=id;this.color=COLORS[id%COLORS.length];this.mi=0;this.ni=0;this.nna=0;this.reps=0;this.prob=0.1;this.trail=[];}
+  tick(){
+    const fat=1-Math.exp(-this.reps/fatigue);
+    const cen=agents.reduce((s,a)=>s+a.mi,0)/agents.length;
+    const flo=1/(1+Math.exp(-(cen-this.mi)*(flock/6)));
+    this.prob=0.5*fat+0.5*flo;
+    if(this.mi<52&&Math.random()<this.prob){this.mi++;this.ni=0;this.reps=0;}
+    else this.reps++;
+    if(!this.trail.length||this.trail[this.trail.length-1]!==this.mi){
+      this.trail.push(this.mi);if(this.trail.length>80)this.trail.shift();
+    }
+  }
+}
+
+function initAgents(n){agents=Array.from({length:n},(_,i)=>new Agent(i));}
+
+function ensureAud(){
+  if(!aud){aud=new AudioContext();mGain=aud.createGain();mGain.gain.value=vol/100;mGain.connect(aud.destination);}
+  if(aud.state==='suspended')aud.resume();
+}
+
+function playNote(f,t,d){
+  if(!f||!aud)return;
+  const o=aud.createOscillator(),g=aud.createGain(),fi=aud.createBiquadFilter();
+  o.type=timbre;o.frequency.value=f;fi.type='lowpass';fi.frequency.value=timbre==='sawtooth'?1100:1800;
+  o.connect(fi);fi.connect(g);g.connect(mGain);
+  const v=timbre==='sawtooth'?0.038:0.055;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+0.012);
+  g.gain.setValueAtTime(v,t+d*0.72);g.gain.linearRampToValueAtTime(0,t+d);
+  o.start(t);o.stop(t+d+0.01);
+}
+
+function playPulse(t,d){
+  if(!aud)return;
+  const o=aud.createOscillator(),g=aud.createGain();
+  o.type='sine';o.frequency.value=freq('C6');
+  o.connect(g);g.connect(mGain);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.024,t+0.004);
+  g.gain.linearRampToValueAtTime(0,t+d*1.5);
+  o.start(t);o.stop(t+d*2);
+}
+
+function s16(){return 60/bpm/4;}
+
+function schedLoop(){
+  const d=s16();
+  while(nextT<aud.currentTime+0.12){
+    if(t16%2===0){
+      playPulse(nextT,d);
+      const dt=Math.max(0,(nextT-aud.currentTime)*1000);
+      setTimeout(()=>{const p=document.getElementById('pdot');p.style.opacity='1';setTimeout(()=>p.style.opacity='0',80);},dt);
+    }
+    agents.forEach(ag=>{
+      if(t16>=ag.nna){
+        const mod=MODS[ag.mi];
+        if(ag.ni>=mod.length)ag.ni=0;
+        const[nn,nd]=mod[ag.ni];
+        playNote(freq(nn),nextT,nd*d*0.84);
+        ag.nna=t16+nd;ag.ni++;
+        if(ag.ni>=mod.length){ag.ni=0;ag.tick();}
+      }
+    });
+    nextT+=d;t16++;
+  }
+}
+
+function togglePlay(){
+  const btn=document.getElementById('playBtn');
+  if(!playing){
+    ensureAud();t16=0;nextT=aud.currentTime+0.05;
+    agents.forEach(a=>a.nna=0);
+    sTimer=setInterval(schedLoop,20);playing=true;
+    btn.textContent='■ Stop';btn.classList.add('playing');
+  }else{
+    clearInterval(sTimer);playing=false;
+    btn.textContent='▶ Play';btn.classList.remove('playing');
+  }
+}
+
+function doReset(){
+  clearInterval(sTimer);playing=false;t16=0;
+  initAgents(+document.getElementById('sl_nag').value);
+  const btn=document.getElementById('playBtn');
+  btn.textContent='▶ Play';btn.classList.remove('playing');
+}
+
+function setTuning(t){
+  tuning=t;
+  document.getElementById('btn_tet').className='tbt'+(t==='tet'?' on':'');
+  document.getElementById('btn_ji').className='tbt'+(t==='ji'?' on':'');
+}
+
+function setTimbre(tb){
+  timbre=tb;
+  [{id:'tb_tri',v:'triangle'},{id:'tb_sin',v:'sine'},{id:'tb_saw',v:'sawtooth'}].forEach(o=>{
+    document.getElementById(o.id).className='tbt'+(tb===o.v?' on':'');
+  });
+}
+
+/* Canvas */
+const canvas=document.getElementById('sim');
+const ctx=canvas.getContext('2d');
+
+function drawFrame(){
+  const W=canvas.width,H=canvas.height;
+  if(!W||!H){requestAnimationFrame(drawFrame);return;}
+  const N=53,pL=36,pR=12,pT=26,pB=24;
+  const pw=W-pL-pR,ph=H-pT-pB,cw=pw/N;
+
+  ctx.fillStyle='#06080d';ctx.fillRect(0,0,W,H);
+
+  /* grid */
+  for(let i=0;i<=N;i++){
+    const x=pL+i*cw;
+    ctx.strokeStyle=i%10===0?'#1a2436':'#0f1828';
+    ctx.lineWidth=i%10===0?0.8:0.4;
+    ctx.beginPath();ctx.moveTo(x,pT);ctx.lineTo(x,H-pB);ctx.stroke();
+  }
+
+  /* density wash */
+  const dens=new Array(N).fill(0);
+  agents.forEach(a=>dens[a.mi]++);
+  const maxD=Math.max(...dens,1);
+  for(let i=0;i<N;i++){
+    if(!dens[i])continue;
+    const rgb=tuning==='ji'?'29,158,117':'186,117,23';
+    ctx.fillStyle=`rgba(${rgb},${dens[i]/maxD*0.2})`;
+    ctx.fillRect(pL+i*cw,pT,cw,ph);
+  }
+
+  /* module numbers */
+  ctx.font='9px monospace';ctx.textAlign='center';
+  for(let i=0;i<N;i++){
+    if((i+1)%5===0||i===0){
+      ctx.fillStyle=dens[i]>0?'#4a8a6a':'#283848';
+      ctx.fillText(i+1,pL+(i+0.5)*cw,H-pB+16);
+      ctx.fillText(i+1,pL+(i+0.5)*cw,pT-8);
+    }
+  }
+
+  /* centroid */
+  if(agents.length){
+    const cen=agents.reduce((s,a)=>s+a.mi,0)/agents.length;
+    const cx=pL+(cen+0.5)*cw;
+    ctx.strokeStyle=tuning==='ji'?'rgba(29,158,117,0.28)':'rgba(186,117,23,0.28)';
+    ctx.lineWidth=1;ctx.setLineDash([3,5]);
+    ctx.beginPath();ctx.moveTo(cx,pT);ctx.lineTo(cx,H-pB);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=tuning==='ji'?'rgba(29,158,117,0.55)':'rgba(186,117,23,0.55)';
+    ctx.font='8px monospace';ctx.textAlign='center';
+    ctx.fillText('centroid',cx,pT-9);
+  }
+
+  /* agents */
+  const rowH=ph/Math.max(agents.length,1);
+  agents.forEach((ag,i)=>{
+    const cy=pT+(i+0.5)*rowH;
+
+    /* trail */
+    ag.trail.forEach((m,ti)=>{
+      const tx=pL+(m+0.5)*cw;
+      ctx.globalAlpha=(ti/ag.trail.length)*0.52;
+      ctx.fillStyle=ag.color;ctx.beginPath();ctx.arc(tx,cy,1.7,0,Math.PI*2);ctx.fill();
+    });
+    ctx.globalAlpha=1;
+
+    const x=pL+(ag.mi+0.5)*cw;
+
+    /* probability ring */
+    ctx.strokeStyle=ag.color;ctx.lineWidth=1;ctx.globalAlpha=0.14+ag.prob*0.38;
+    ctx.beginPath();ctx.arc(x,cy,6+ag.prob*13,0,Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=1;
+
+    /* dot */
+    ctx.fillStyle=ag.color;ctx.beginPath();ctx.arc(x,cy,4,0,Math.PI*2);ctx.fill();
+
+    /* labels */
+    ctx.font='9px monospace';
+    ctx.textAlign='right';ctx.fillStyle=ag.color;ctx.globalAlpha=0.65;
+    ctx.fillText('A'+(ag.id+1),pL-5,cy+3);
+    ctx.textAlign='left';ctx.fillStyle='rgba(110,140,180,0.75)';ctx.globalAlpha=0.85;
+    ctx.fillText('p='+ag.prob.toFixed(2)+' ×'+ag.reps,x+7,cy+3);
+    ctx.globalAlpha=1;
+  });
+  requestAnimationFrame(drawFrame);
+}
+
+function resizeCanvas(){
+  canvas.width=canvas.offsetWidth;
+  canvas.height=canvas.offsetHeight;
+}
+
+function init(){
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+  initAgents(4);
+  drawFrame();
+
+  document.getElementById('sl_bpm').oninput=function(){bpm=+this.value;document.getElementById('vl_bpm').textContent=this.value;};
+  document.getElementById('sl_fat').oninput=function(){fatigue=+this.value;document.getElementById('vl_fat').textContent=this.value;};
+  document.getElementById('sl_flo').oninput=function(){flock=+this.value;document.getElementById('vl_flo').textContent=this.value;};
+  document.getElementById('sl_vol').oninput=function(){vol=+this.value;document.getElementById('vl_vol').textContent=this.value;if(mGain)mGain.gain.value=vol/100;};
+  document.getElementById('sl_nag').oninput=function(){
+    const n=+this.value;document.getElementById('vl_nag').textContent=n;
+    const was=playing;if(was)clearInterval(sTimer);
+    if(n>agents.length){for(let i=agents.length;i<n;i++)agents.push(new Agent(i));}
+    else agents=agents.slice(0,n);
+    if(was){t16=0;nextT=aud.currentTime+0.05;agents.forEach(a=>a.nna=0);sTimer=setInterval(schedLoop,20);}
+  };
+}
+
+setTimeout(init,80);
+</script>
+</body>
+</html>

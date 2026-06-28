@@ -1,19 +1,2 @@
-# .github/FUNDING.yml
-# このファイルをリポジトリの .github/ 直下に置くと、
-# GitHub のリポジトリ画面に「Sponsor」ボタンが表示されます。
-# （全リポジトリ共通で出したい場合は、dm99x/.github というリポジトリの
-#   .github/FUNDING.yml に置くとプロフィール既定として効きます）
-
-# --- GitHub Sponsors（開発・OSS の評価軸） ---
-# ※ 先に github.com/sponsors で GitHub Sponsors を有効化しておく必要があります。
+# GitHub Sponsors
 github: dm99x
-
-# --- 専用キーのないサービスは custom に URL を列挙（最大4件） ---
-custom:
-  # OFUSE（投げ銭・ファンレター）。実際のアカウント作成後に正しい URL に置換してください。
-  - "https://ofuse.me/<your-ofuse-handle>"
-  # dm99x.net 上の codoc サポート枠 / 支援導線（アンカーは実際の設置先に合わせて変更）
-  - "https://dm99x.net/#support"
-
-# 使わないキーは行ごと削除して構いません。
-# 参考: 他に patreon / ko_fi / buy_me_a_coffee / liberapay / open_collective などの専用キーもあります。
